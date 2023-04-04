@@ -1,0 +1,14 @@
+{
+  "name": "rozetka-cypress-test",
+  "version": "1.0.0",
+  "scripts": {
+    "develop": "npx cypress open",
+    "headless": "npx cypress run --env allure=true",
+    "open-report": "allure serve ./allure-results"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "@shelex/cypress-allure-plugin": "^2.37.0",
+    "cypress": "^12.9.0"
+  }
+}
