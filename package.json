@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "develop": "npx cypress open",
-    "headless": "npx cypress run --env allure=true",
+    "headless": "npx cypress run --env allure=true --browser chrome",
     "open-report": "allure serve ./allure-results"
   },
   "license": "ISC",
