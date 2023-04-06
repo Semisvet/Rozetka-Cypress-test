@@ -1,144 +1,138 @@
-describe ('Rozetka', ()=> {
+import { convertPriceTextToNumber } from '../helpers/price';
+import DashboardPage from '../pages/dashboard-page';
+import ProductsListPage from '../pages/products-list-page';
+import CategoriesPage from '../pages/categories-page';
+import ProductDetailsPage from '../pages/product-details-page';
+import HeaderElement from '../elements/header-element';
+import CartElement from '../elements/cart-element';
+import BodyElement from '../elements/body-element';
+
+describe ('Rozetka', function () {
+    const url = 'https://rozetka.com.ua/ua/';
+    
+    beforeEach(function () {
+        cy.visit(url);
+
+        cy.url().should('equal', url);
+    });
+
+
     it('Verify if the price filter working correctly for the following marketplaces',  function () {
+        const minPriceValue = 15000;
+        const maxPriceValue = 20000;
 
-        cy.viewport(1388,1038);
+        DashboardPage.getCategory('Побутова техніка').click();
 
-        cy.visit("https://rozetka.com.ua/ua");
+        CategoriesPage.getSubCategory('Посудомийні машини').click();
 
-        cy.url().should('equal', "https://rozetka.com.ua/ua/");
+        ProductsListPage.getFilterCheckbox('Electrolux').click({force: true});
 
-        cy.get('.menu-categories_type_main li:nth-child(4) .menu-categories__link').click();
+        ProductsListPage.getFilterCheckbox('Повногабаритна (60 см)').click({force: true});
 
-        cy.get('rz-dynamic-widgets > rz-widget-list:nth-child(3) > section > ul > li:nth-child(1) ul li:nth-child(3) a').click();
+        ProductsListPage.getFilterCheckbox('Є в наявності').click({force: true});
 
-        cy.get('[data-id="Electrolux"]', {timeout: 10000}).click({force: true});
+        // split clear and type to avoid error
+        ProductsListPage.getPriceFilterInput('min').clear();
+        ProductsListPage.getPriceFilterInput('min').type(minPriceValue.toString());
 
-        cy.get('[data-id="Повногабаритна (60 см)"]', {timeout: 10000}).click({force: true});
+        ProductsListPage.getPriceFilterInput('max').clear().type(maxPriceValue.toString());
 
-        cy.get('[data-id="Є в наявності"]', {timeout: 10000}).click({force: true});
+        ProductsListPage.getPriceFilterButton().should('be.not.disabled').click({force: true});
 
-        cy.get('.slider-filter__input[formcontrolname="min"]').clear();
-        cy.get('.slider-filter__input[formcontrolname="min"]').type('15000');
+        ProductsListPage.getSortingSelect().select('1: cheap');
 
-        cy.get('.slider-filter__input[formcontrolname="max"]').clear().type('20000');
+        HeaderElement.getHeaderLoader().should('not.be.visible');
 
-        cy.get('.slider-filter__button').should('be.not.disabled').click({force: true});
+        BodyElement.getMainElement().should('not.have.class', 'preloader_type_element');
 
-        cy.get('.catalog-settings__sorting > select', {timeout: 10000}).select('1: cheap');
-
-        cy.get('.preloader', {timeout: 10000}).should('not.be.visible');
-        cy.get('main', {timeout: 10000}).should('not.have.class', 'preloader_type_element');
-
-        cy.get('.catalog-grid').children().then((children) => {
+        ProductsListPage.getCatalogGrid().children().then((children) => {
             children.each((index, element) => {
-                const text = element.querySelector('.goods-tile__price-value').textContent;
-                const price = text.replace(/\s/g, '').replace('₴', '');
+                const valueElement = element.querySelector('.goods-tile__price-value');
+                const price = convertPriceTextToNumber(valueElement);
 
-                expect(parseInt(price)).be.above(15000);
-                expect(parseInt(price)).be.below(20000);
+                expect(price).be.above(minPriceValue);
+                expect(price).be.below(maxPriceValue);
 
                 if (index < children.length - 1) {
                     const nextElement = children[index + 1];
-                    const nextElementText = nextElement.querySelector('.goods-tile__price-value').textContent
-                    const nextElementPrice = nextElementText.replace(/\s/g, '').replace('₴', '');
+                    const nextElementValue = nextElement.querySelector('.goods-tile__price-value');
+                    const nextElementPrice = convertPriceTextToNumber(nextElementValue);
 
-                    expect(parseInt(price)).be.below(parseInt(nextElementPrice));
+                    expect(price).be.below(nextElementPrice);
                 }
             })
         });
     });
 
     it('Add items to the basket', function () {
-        cy.viewport(1388,1038);
+        DashboardPage.getCategory('Товари для геймерів').click();
 
-        cy.visit("https://rozetka.com.ua/ua");
+        CategoriesPage.getHeadingSubCategory('Ігрові приставки').click();
 
-        cy.url().should('equal', "https://rozetka.com.ua/ua/");
+        ProductsListPage.getProductPriceByIndex(1).then((element) => {
+            const price = convertPriceTextToNumber(element[0]);
 
-        cy.get('.fat-wrap .menu-categories__link').contains('Товари для геймерів').click();
-
-        cy.get('.tile-cats__heading[title="Ігрові приставки"]').click();
-
-        cy.get('.catalog-grid li:nth-child(1) .goods-tile__price-value').then((element) => {
-            const text = element[0].textContent;
-            const price = text.replace(/\s/g, '').replace('₴', '');
-
-            cy.wrap(parseInt(price)).as('firstItemPrice');
+            cy.wrap(price).as('firstItemPrice');
         });
 
-        cy.get('.catalog-grid li:nth-child(1) .goods-tile__buy-button').click();
+        ProductsListPage.getProductSelectButtonByIndex(1).click();
 
-        cy.get('rz-cart .badge').should('contain', '1');
+        HeaderElement.getCartBadge().should('contain', '1');
 
-        cy.get('.header__logo').click();
+        HeaderElement.getHeaderLogoLink().click();
 
-        cy.get('.fat-wrap .menu-categories__link').contains('Дача, сад і город').click();
+        DashboardPage.getCategory('Дача, сад і город').click();
 
-        cy.get('[title="Повітродуви"]').click();
+        CategoriesPage.getSubCategory('Повітродуви').click();
 
-        cy.get('.catalog-grid li:nth-child(2) .goods-tile__price-value').then((element) => {
-            const text = element[0].textContent;
-            const price = text.replace(/\s/g, '').replace('₴', '');
+        ProductsListPage.getProductPriceByIndex(2).then((element) => {
+            const price = convertPriceTextToNumber(element[0]);
 
-            cy.wrap(parseInt(price)).as('secondItemPrice');
+            cy.wrap(price).as('secondItemPrice');
         });
 
-        cy.get('.catalog-grid li:nth-child(2) .goods-tile__buy-button').click();
+        ProductsListPage.getProductSelectButtonByIndex(2).click();
 
-        cy.get('rz-cart .badge').should('contain', '2');
+        HeaderElement.getCartBadge().should('contain', '2');
 
-        cy.get('.header__button[rzopencart]').click();
+        HeaderElement.getOpenCartButton().click();
 
-        cy.get('#cartProductActions0').click();
+        CartElement.getCartProductActionButtonByIndex(0).click();
 
-        cy.get('#cartProductActions0 + .popup-menu__list--context button').should('be.visible').should('be.not.disabled');
+        CartElement.getCartProductDeleteButtonByIndex(0).should('be.visible').should('be.not.disabled');
 
-        cy.get('#cartProductActions1').click();
+        CartElement.getCartProductActionButtonByIndex(1).click();
 
-        cy.get('#cartProductActions1 + .popup-menu__list--context button').should('be.visible').should('be.not.disabled');
+        CartElement.getCartProductDeleteButtonByIndex(1).should('be.visible').should('be.not.disabled');
 
-        cy.get('.cart-receipt__sum-price').then(element => {
-            const text = element[0].textContent;
-            const price = text.replace(/\s/g, '').replace('₴', '');
-            const sumPrice = parseInt(price);
+        CartElement.getCartSumPrice().then(element => {
+            const sumPrice = convertPriceTextToNumber(element[0]);
 
             expect(sumPrice).be.equal(this.firstItemPrice + this.secondItemPrice);
         })
     });
 
     it('Search the item', function () {
-        cy.viewport(1388,1038);
+        HeaderElement.getSearchInput().type('Холодильник{enter}');
 
-        cy.visit("https://rozetka.com.ua/ua");
-
-        cy.url().should('equal', "https://rozetka.com.ua/ua/");
-
-        cy.get('.search-form__input').type('Холодильник{enter}');
-
-        cy.get('.goods-tile__title').should('contain', 'Холодильник');
+        ProductsListPage.getAllProductsTitles().should('contain', 'Холодильник');
     });
 
     it('Check comments count [FAIL]', function () {
-        cy.viewport(1388,1038);
+        DashboardPage.getCategory('Ноутбуки та комп’ютери').click();
 
-        cy.visit("https://rozetka.com.ua/ua");
+        CategoriesPage.getHeadingSubCategory('Ноутбуки').click();
 
-        cy.url().should('equal', "https://rozetka.com.ua/ua/");
-
-        cy.get('.fat-wrap .menu-categories__link').contains('Ноутбуки та комп’ютери').click();
-
-        cy.get('.tile-cats__heading[title="Ноутбуки"]').click();
-
-        cy.get('.catalog-grid li:nth-child(2) .goods-tile__reviews-link').then(element => {
+        ProductsListPage.getReviewCountByIndex(2).then(element => {
             const reviewsText = element[0].textContent;
             const reviewsNumber = reviewsText.replace('відгуків', '');
 
             cy.wrap(parseInt(reviewsNumber)).as('reviewsNumber');
         });
 
-        cy.get('.catalog-grid li:nth-child(2) .goods-tile__picture').click();
+        ProductsListPage.getProductTitleImageLink(2).click();
 
-        cy.get('.tabs__list .tabs__item:nth-child(3) .tabs__link-text').then(element => {
+        ProductDetailsPage.getReviewsCountLabel().then(element => {
             const reviewsText = element[0].textContent;
 
             // Failed test part
