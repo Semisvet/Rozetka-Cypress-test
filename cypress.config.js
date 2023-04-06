@@ -8,5 +8,8 @@ module.exports = defineConfig({
 
       return config;
     },
+    viewportWidth: 1920,
+    viewportHeight: 1080,
+    defaultCommandTimeout: 10000,
   },
 });
